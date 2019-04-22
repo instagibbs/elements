@@ -1787,7 +1787,7 @@ int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Para
     int32_t nVersion = VERSIONBITS_TOP_BITS;
     // We always signal dynamic federations when active
     if (IsDynaFedEnabled(pindexPrev, params)) {
-        nVersion |= CBlockHeader::DYNAMIC_MASK
+        nVersion |= CBlockHeader::DYNAMIC_MASK;
     }
 
     for (int i = 0; i < (int)Consensus::MAX_VERSION_BITS_DEPLOYMENTS; i++) {
