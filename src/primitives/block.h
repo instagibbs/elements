@@ -91,15 +91,8 @@ public:
             READWRITE(hashPrevBlock);
             READWRITE(hashMerkleRoot);
             READWRITE(nTime);
-            if (g_con_blockheightinheader) {
-                READWRITE(block_height);
-            }
-            if (g_signed_blocks) {
-                READWRITE(proof);
-            } else {
-                READWRITE(nBits);
-                READWRITE(nNonce);
-            }
+            READWRITE(block_height);
+            READWRITE(proof);
         } else {
             READWRITE(hashPrevBlock);
             READWRITE(hashMerkleRoot);
