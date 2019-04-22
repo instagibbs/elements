@@ -40,3 +40,9 @@ std::string CBlock::ToString() const
     }
     return s.str();
 }
+
+uint256 CalculateCPMTRoot() const
+{
+    std::vector<uint256> cpmt_leaves;
+    return ComputeFastMerkleRoot(cmpt_leaves);
+}

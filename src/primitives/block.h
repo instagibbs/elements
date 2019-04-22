@@ -52,6 +52,29 @@ public:
     std::string ToString() const;
 };
 
+class ConsensusParameterMerkleTree
+{
+public:
+    // Computed and stored on construction
+    uint256 m_cpmt_root;
+
+    // Current consensus parameters
+    CScript c_sbs; // (s)ign(b)lock(s)cript
+    CScript c_fps; // (f)ed(p)eg(s)cript
+    std::vector<std::vector<unsigned char>> c_pe; // (p)ak (e)ntries
+
+    // Proposed consensus paramaters
+    CScript p_sbs; // (s)ign(b)lock(s)cript
+    CScript p_fps; // (f)ed(p)eg(s)cript
+    std::vector<std::vector<unsigned char>> p_pe; // (p)ak (e)ntries
+
+    ConsensusParameterMerkleTree() = delete;
+    ConsensusParameterMerkleTree(ConsensusParameterMerkleTree& cmpt) = delete;
+    ConsensusParameterMerkelTree(const CScript& c_sbs_in, const CScript& c_fps_in, const std::vector<std::vector<unsigned char>> c_pe_in, const CScript& p_sbs_in, const CScript& p_fps_in, const std::vector<std::vector<unsigned char>> p_pe_in) c_sbs(c_sbs_in), c_fps(c_fps_in), c_pe(c_pe_in), p_sbs(p_sbs_in), p_fps(p_fps_in), p_pe(p_pe_in),   { m_cpmt_root = CalculateCPMTRoot(); }
+
+    uint256 CalculateCPMTRoot() const;
+}
+
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
  * requirements.  When they solve the proof-of-work, they broadcast the block
@@ -73,6 +96,10 @@ public:
     uint32_t nBits;
     uint32_t nNonce;
     CProof proof;
+    // Memory-only, used to tell serializer what to serialize
+    bool m_serialize_full_cpmt = false;
+    // Subsumes the proof field
+    ConsensusParameterMerkleTree m_cpmt;
 
     // Versionbits bit 27 has been redefined to dynamic blocks header version bit
     static const uint32_t DYNAMIC_MASK = (uint32_t)1 << 27;
@@ -92,7 +119,11 @@ public:
             READWRITE(hashMerkleRoot);
             READWRITE(nTime);
             READWRITE(block_height);
-            READWRITE(proof);
+            if (this->nVersion & DYNAMIC_TREE_MASK) {
+                READWRITE(cpmt);
+            } else {
+                READWRITE();
+            }
         } else {
             READWRITE(hashPrevBlock);
             READWRITE(hashMerkleRoot);
