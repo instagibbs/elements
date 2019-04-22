@@ -74,6 +74,9 @@ public:
     uint32_t nNonce;
     CProof proof;
 
+    // Versionbits bit 27 has been redefined to dynamic blocks header version bit
+    static const uint32_t DYNAMIC_MASK = (uint32_t)1 << 27;
+
     CBlockHeader()
     {
         SetNull();
@@ -84,17 +87,32 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(this->nVersion);
-        READWRITE(hashPrevBlock);
-        READWRITE(hashMerkleRoot);
-        READWRITE(nTime);
-        if (g_con_blockheightinheader) {
-            READWRITE(block_height);
-        }
-        if (g_signed_blocks) {
-            READWRITE(proof);
+        if (this->nVersion & DYNAMIC_MASK) {
+            READWRITE(hashPrevBlock);
+            READWRITE(hashMerkleRoot);
+            READWRITE(nTime);
+            if (g_con_blockheightinheader) {
+                READWRITE(block_height);
+            }
+            if (g_signed_blocks) {
+                READWRITE(proof);
+            } else {
+                READWRITE(nBits);
+                READWRITE(nNonce);
+            }
         } else {
-            READWRITE(nBits);
-            READWRITE(nNonce);
+            READWRITE(hashPrevBlock);
+            READWRITE(hashMerkleRoot);
+            READWRITE(nTime);
+            if (g_con_blockheightinheader) {
+                READWRITE(block_height);
+            }
+            if (g_signed_blocks) {
+                READWRITE(proof);
+            } else {
+                READWRITE(nBits);
+                READWRITE(nNonce);
+            }
         }
     }
 
