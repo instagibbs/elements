@@ -124,6 +124,7 @@ public:
             if (this->nVersion & DYNAMIC_TREE_MASK) {
                 READWRITE(cpmt);
             } else {
+                // FIXME: Need to call different serialization based on mode?
                 READWRITE(cpmt.CalculateCPMTRoot());
             }
         } else {
