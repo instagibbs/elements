@@ -593,6 +593,8 @@ class CCustomParams : public CRegTestParams {
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = args.GetArg("-con_csv_deploy_start", Consensus::BIP9Deployment::ALWAYS_ACTIVE);
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
+        // This deployment activating will disable the activation warnings for
+        // bits 26 and 27 each of which is used for dynamic federations
         consensus.vDeployments[Consensus::DEPLOYMENT_DYNA_FED].bit = 25;
         consensus.vDeployments[Consensus::DEPLOYMENT_DYNA_FED].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_DYNA_FED].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;

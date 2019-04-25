@@ -1818,6 +1818,9 @@ public:
 
     bool Condition(const CBlockIndex* pindex, const Consensus::Params& params) const override
     {
+        // We do not warn about burned versionbits
+        if ((bit == 26 || bit == 27) && IsDynaFedEnabled(pindex, params)) return false;
+
         return ((pindex->nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS) &&
                ((pindex->nVersion >> bit) & 1) != 0 &&
                ((ComputeBlockVersion(pindex->pprev, params) >> bit) & 1) == 0;
@@ -3529,6 +3532,19 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationSta
        (block.nVersion < 4 && nHeight >= consensusParams.BIP65Height))
             return state.Invalid(false, REJECT_OBSOLETE, strprintf("bad-version(0x%08x)", block.nVersion),
                                  strprintf("rejected nVersion=0x%08x block", block.nVersion));
+
+    // check for dynamic federations activation, then ensuring block header version
+    // bits are set. These bits drive serialization of the header.
+    if (IsDynaFedEnabled(pindexPrev, consensusParams)) {
+        assert(g_con_elementsmode);
+        if ((block.nVersion & CBlockHeader::DYNAMIC_MASK) == 0) {
+            return state.Invalid(false, REJECT_OBSOLETE, "not-dyna-fed", "block header is not dynamic federation version though dynamic federations is activated");
+        }
+
+        // TODO: Check if full CPMT was required or not, compare with block version
+
+        // TODO: Check for validity of current parameters
+    }
 
     return true;
 }
