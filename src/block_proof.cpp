@@ -13,7 +13,12 @@
 bool CheckChallenge(const CBlockHeader& block, const CBlockIndex& indexLast, const Consensus::Params& params)
 {
     if (g_signed_blocks) {
-        return block.proof.challenge == indexLast.proof.challenge;
+        if (IsDynaFedEnabled(indexLast, params)) {
+            // All CPMT transition checks are done in ContextualCheckDynaFedHeader
+            return true;
+        } else {
+            return block.proof.challenge == indexLast.proof.challenge;
+        }
     } else {
         return block.nBits == GetNextWorkRequired(&indexLast, &block, params);
     }

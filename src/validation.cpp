@@ -3480,7 +3480,25 @@ boost::optional<CPAKList> GetPAKKeysFromCommitment(const CTransaction& coinbase)
     }
 }
 
+static bool ContextualCheckDynaFedHeader(const CBlockHeader& block, CValidationState& state, const CChainParams& params, const CBlockIndex* pindexPrev)
+{
+        if ((block.nVersion & CBlockHeader::DYNAMIC_MASK) == 0) {
+            return state.Invalid(false, REJECT_OBSOLETE, "not-dyna-fed", "block header is not dynamic federation version though dynamic federations is activated");
+        }
+        // TODO: Check if full CPMT was required or not based on transition logic,
+        // compare with block version:
+        // Block version must have TREE bit set IFF:
+        //       0) Dynamic federations just activated.
+        //       1) We are on a block height % N = 0 and signaling for transition succeeded
 
+        // TODO: Check for validity of current parameters:
+        //       0) Dynamic federations just activated, use signblockscript/fedpegscript
+        //       and pak list as of previous block as current parameters.
+        //       1) If dynafed transition just happened, proposed becomes current
+        //       2) If no transition, same as previous blocks' current
+
+        return true;
+}
 
 
 /** Context-dependent validity checks.
@@ -3537,13 +3555,7 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationSta
     // bits are set. These bits drive serialization of the header.
     if (IsDynaFedEnabled(pindexPrev, consensusParams)) {
         assert(g_con_elementsmode);
-        if ((block.nVersion & CBlockHeader::DYNAMIC_MASK) == 0) {
-            return state.Invalid(false, REJECT_OBSOLETE, "not-dyna-fed", "block header is not dynamic federation version though dynamic federations is activated");
-        }
-
-        // TODO: Check if full CPMT was required or not, compare with block version
-
-        // TODO: Check for validity of current parameters
+        return ContextualCheckDynaFedHeader(block);
     }
 
     return true;
