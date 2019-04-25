@@ -68,12 +68,27 @@ public:
     CScript p_fps; // (f)ed(p)eg(s)cript
     std::vector<std::vector<unsigned char>> p_pe; // (p)ak (e)ntries
 
-    ConsensusParameterMerkleTree() = delete;
-    ConsensusParameterMerkleTree(ConsensusParameterMerkleTree& cmpt) = delete;
-    ConsensusParameterMerkelTree(const CScript& c_sbs_in, const CScript& c_fps_in, const std::vector<std::vector<unsigned char>> c_pe_in, const CScript& p_sbs_in, const CScript& p_fps_in, const std::vector<std::vector<unsigned char>> p_pe_in) c_sbs(c_sbs_in), c_fps(c_fps_in), c_pe(c_pe_in), p_sbs(p_sbs_in), p_fps(p_fps_in), p_pe(p_pe_in),   { m_cpmt_root = CalculateCPMTRoot(); }
+    ConsensusParameterMerkleTree() {}
+    ConsensusParameterMerkleTree(const CScript& c_sbs_in, const CScript& c_fps_in, const std::vector<std::vector<unsigned char>> c_pe_in, const CScript& p_sbs_in, const CScript& p_fps_in, const std::vector<std::vector<unsigned char>> p_pe_in) : c_sbs(c_sbs_in), c_fps(c_fps_in), c_pe(c_pe_in), p_sbs(p_sbs_in), p_fps(p_fps_in), p_pe(p_pe_in)  { m_cpmt_root = CalculateRoot(); }
 
-    uint256 CalculateCPMTRoot() const;
-}
+    ADD_SERIALIZE_METHODS;
+
+    // Full serialization only used for "extended block headers"
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(c_sbs);
+        READWRITE(c_fps);
+        READWRITE(c_pe);
+        READWRITE(p_sbs);
+        READWRITE(p_fps);
+        READWRITE(p_pe);
+        if(ser_action.ForRead()) {
+            m_cpmt_root = CalculateRoot();
+        }
+    }
+
+    uint256 CalculateRoot() const;
+};
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -96,8 +111,6 @@ public:
     uint32_t nBits;
     uint32_t nNonce;
     CProof proof;
-    // Memory-only, used to tell serializer what to serialize
-    bool m_serialize_full_cpmt = false;
     // Subsumes the proof field
     ConsensusParameterMerkleTree m_cpmt;
 
@@ -122,10 +135,9 @@ public:
             READWRITE(nTime);
             READWRITE(block_height);
             if (this->nVersion & DYNAMIC_TREE_MASK) {
-                READWRITE(cpmt);
+                READWRITE(m_cpmt);
             } else {
-                // FIXME: Need to call different serialization based on mode?
-                READWRITE(cpmt.CalculateCPMTRoot());
+                READWRITE(m_cpmt.m_cpmt_root);
             }
         } else {
             READWRITE(hashPrevBlock);

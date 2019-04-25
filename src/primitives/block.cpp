@@ -41,8 +41,14 @@ std::string CBlock::ToString() const
     return s.str();
 }
 
-uint256 CalculateCPMTRoot() const
+uint256 ConsensusParameterMerkleTree::CalculateRoot() const
 {
-    std::vector<uint256> cpmt_leaves;
-    return ComputeFastMerkleRoot(cmpt_leaves);
+    std::vector<uint256> leaves;
+    leaves.push_back(SerializeHash(c_sbs, SER_GETHASH, 0));
+    leaves.push_back(SerializeHash(c_fps, SER_GETHASH, 0));
+    leaves.push_back(SerializeHash(c_pe, SER_GETHASH, 0));
+    leaves.push_back(SerializeHash(p_sbs, SER_GETHASH, 0));
+    leaves.push_back(SerializeHash(p_fps, SER_GETHASH, 0));
+    leaves.push_back(SerializeHash(p_pe, SER_GETHASH, 0));
+    return ComputeFastMerkleRoot(leaves);
 }
