@@ -56,6 +56,7 @@ bool CheckProof(const CBlockHeader& block, const Consensus::Params& params)
     }
 }
 
+// TODO DYNAFED: Use RPC to get parent signblockscript
 bool CheckProofSignedParent(const CBlockHeader& block, const Consensus::Params& params)
 {
     return CheckProofGeneric(block, params, params.parent_chain_signblockscript);
