@@ -118,6 +118,7 @@ public:
     static const uint32_t DYNAMIC_MASK = (uint32_t)1 << 27;
     // Versionbits bit 26 has been redefined to dynamic blocks full cpmt serialization bit
     static const uint32_t DYNAMIC_TREE_MASK = (uint32_t)1 << 26;
+    static const uint32_t DYNAMIC_MASKS = DYNAMIC_MASK | DYNAMIC_TREE_MASK;
 
     CBlockHeader()
     {
