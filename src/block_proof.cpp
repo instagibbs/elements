@@ -24,9 +24,9 @@ void ResetChallenge(CBlockHeader& block, const CBlockIndex& indexLast, const Con
     block.proof.challenge = indexLast.proof.challenge;
 }
 
-static bool CheckProofGeneric(const CBlockHeader& block, const Consensus::Params& params, const CScript& challenge)
+static bool CheckProofGeneric(const CBlockHeader& block, const uint32_t max_block_signature_size, const CScript& challenge)
 {
-    if (block.proof.solution.size() > params.max_block_signature_size) {
+    if (block.proof.solution.size() > max_block_signature_size) {
         return false;
     }
 
@@ -47,7 +47,7 @@ static bool CheckProofGeneric(const CBlockHeader& block, const Consensus::Params
 bool CheckProof(const CBlockHeader& block, const Consensus::Params& params)
 {
     if (g_signed_blocks) {
-        return CheckProofGeneric(block, params, params.signblockscript);
+        return CheckProofGeneric(block, params.max_block_signature_size, params.signblockscript);
     } else {
         return CheckProofOfWork(block.GetHash(), block.nBits, params);
     }
@@ -56,7 +56,7 @@ bool CheckProof(const CBlockHeader& block, const Consensus::Params& params)
 // TODO DYNAFED: Use RPC to get parent signblockscript
 bool CheckProofSignedParent(const CBlockHeader& block, const Consensus::Params& params)
 {
-    return CheckProofGeneric(block, params, params.parent_chain_signblockscript);
+    return CheckProofGeneric(block, params.max_block_signature_size, params.parent_chain_signblockscript);
 }
 
 void ResetProof(CBlockHeader& block)
