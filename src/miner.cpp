@@ -25,9 +25,6 @@
 #include <utilmoneystr.h>
 #include <validationinterface.h>
 
-// ELEMENTS
-#include <block_proof.h> // ResetProof, ResetChallenge
-
 #include <algorithm>
 #include <queue>
 #include <utility>
@@ -99,6 +96,16 @@ void BlockAssembler::resetBlock()
     nFees = 0;
 }
 
+void SetBlockConsensusParams(CBlockHeader& block, const CBlockIndex& indexLast, const Consensus::Params& params)
+{
+    block.proof.challenge = indexLast.proof.challenge;
+}
+
+void ResetProof(CBlockHeader& block)
+{
+    block.proof.solution.clear();
+}
+
 std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, int min_tx_age)
 {
     assert(min_tx_age >= 0);
@@ -167,9 +174,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         // Pad block weight by block proof fields (including upper-bound of signature)
         nBlockWeight += chainparams.GetConsensus().signblockscript.size() * WITNESS_SCALE_FACTOR;
         nBlockWeight += chainparams.GetConsensus().max_block_signature_size * WITNESS_SCALE_FACTOR;
-        // Reset block proof
         ResetProof(*pblock);
-        ResetChallenge(*pblock, *pindexPrev, chainparams.GetConsensus());
+        SetBlockConsensusParams(*pblock, *pindexPrev, chainparams.GetConsensus());
     }
 
     int nPackagesSelected = 0;

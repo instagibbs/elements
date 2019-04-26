@@ -19,11 +19,6 @@ bool CheckChallenge(const CBlockHeader& block, const CBlockIndex& indexLast, con
     }
 }
 
-void ResetChallenge(CBlockHeader& block, const CBlockIndex& indexLast, const Consensus::Params& params)
-{
-    block.proof.challenge = indexLast.proof.challenge;
-}
-
 static bool CheckProofGeneric(const CBlockHeader& block, const uint32_t max_block_signature_size, const CScript& challenge)
 {
     if (block.proof.solution.size() > max_block_signature_size) {
@@ -57,9 +52,4 @@ bool CheckProof(const CBlockHeader& block, const Consensus::Params& params)
 bool CheckProofSignedParent(const CBlockHeader& block, const Consensus::Params& params)
 {
     return CheckProofGeneric(block, params.max_block_signature_size, params.parent_chain_signblockscript);
-}
-
-void ResetProof(CBlockHeader& block)
-{
-    block.proof.solution.clear();
 }
