@@ -110,9 +110,11 @@ public:
     uint32_t block_height;
     uint32_t nBits;
     uint32_t nNonce;
+    // Only used pre-dynamic federation
     CProof proof;
-    // Subsumes the proof field
+    // Dynamic federation: Subsumes the proof field
     ConsensusParameterMerkleTree m_cpmt;
+    CScriptWitness signblock_witness;
 
     // Versionbits bit 27 has been redefined to dynamic blocks header version bit
     static const uint32_t DYNAMIC_MASK = (uint32_t)1 << 27;
@@ -140,6 +142,7 @@ public:
             } else {
                 READWRITE(m_cpmt.m_cpmt_root);
             }
+            READWRITE(signblock_witness.stack);
         } else {
             READWRITE(hashPrevBlock);
             READWRITE(hashMerkleRoot);
