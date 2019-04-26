@@ -26,9 +26,6 @@ void ResetChallenge(CBlockHeader& block, const CBlockIndex& indexLast, const Con
 
 static bool CheckProofGeneric(const CBlockHeader& block, const Consensus::Params& params, const CScript& challenge)
 {
-    if (block.GetHash() == params.hashGenesisBlock)
-       return true;
-
     if (block.proof.solution.size() > params.max_block_signature_size) {
         return false;
     }
