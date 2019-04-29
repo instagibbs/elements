@@ -52,39 +52,65 @@ public:
     std::string ToString() const;
 };
 
-class ConsensusParameterMerkleTree
+
+class ConsensusParamEntry
 {
 public:
-    // Computed and stored on construction
-    uint256 m_cpmt_root;
+    unsigned char serialize_type; // Determines how it is serialized, defaults to null
+    uint256 m_root;
+    CScript m_signblockscript;
+    uint32_t m_sbs_wit_limit; // Max block signature witness serialized size
+    CScript m_fedpegscript;
+    // No consensus meaning to the particular bytes, currently we interpret as PAK keys, details in pak.h
+    std::vector<std::vector<unsigned char>> m_extension_space;
 
-    // Current consensus parameters
-    CScript c_sbs; // (s)ign(b)lock(s)cript
-    CScript c_fps; // (f)ed(p)eg(s)cript
-    std::vector<std::vector<unsigned char>> c_pe; // (p)ak (e)ntries
-
-    // Proposed consensus paramaters
-    CScript p_sbs; // (s)ign(b)lock(s)cript
-    CScript p_fps; // (f)ed(p)eg(s)cript
-    std::vector<std::vector<unsigned char>> p_pe; // (p)ak (e)ntries
-
-    ConsensusParameterMerkleTree() {}
-    ConsensusParameterMerkleTree(const CScript& c_sbs_in, const CScript& c_fps_in, const std::vector<std::vector<unsigned char>> c_pe_in, const CScript& p_sbs_in, const CScript& p_fps_in, const std::vector<std::vector<unsigned char>> p_pe_in) : c_sbs(c_sbs_in), c_fps(c_fps_in), c_pe(c_pe_in), p_sbs(p_sbs_in), p_fps(p_fps_in), p_pe(p_pe_in)  { m_cpmt_root = CalculateRoot(); }
+    // TODO Delete unused constructors such as below?
+    ConsensusParamEntry() { m_sbs_wit_limit = 0; serialize_type = 0; };
+    // TODO pass in serialization, put everything behind private?
+    ConsensusParamEntry(const CScript& signblockscript_in, const uint32_t sbs_wit_limit_in, const CScript& fedpegscript_in, const std::vector<std::vector<unsigned char>> pak_entries_in) : signblockscript(signblockscript_in), sbs_wit_limit(sbs_wit_limit_in), fedpegscript(fedpegscript_in), pak_entries(pak_entries_in) { serialize_type = 0; m_root = CalculateRoot(); };
 
     ADD_SERIALIZE_METHODS;
 
-    // Full serialization only used for "extended block headers"
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(c_sbs);
-        READWRITE(c_fps);
-        READWRITE(c_pe);
-        READWRITE(p_sbs);
-        READWRITE(p_fps);
-        READWRITE(p_pe);
-        if(ser_action.ForRead()) {
-            m_cpmt_root = CalculateRoot();
+        READWRITE(serialize_type);
+        switch(serialize_type) {
+            case 0:
+                /* Null entry, used to signal "no vote" proposal */
+                break;
+            case 1:
+                READWRITE(m_signblockscript);
+                break;
+            case 2:
+                READWRITE(m_signblockscript);
+                READWRITE(m_sbs_wit_limit);
+                READWRITE(m_fedpegscript);
+                READWRITE(m_extension_space);
+                break;
         }
+    }
+
+    // TODO fix/remove this
+    uint256 CalculateRoot() const;
+}
+
+class DynaFedParams
+{
+public:
+
+    // Currently enforced by network, not all fields may be known
+    ConsensusParamEntry m_current;
+    // Proposed rules for next epoch
+    ConsensusParamEntry m_proposed;
+
+    ConsensusParamTree(const ConsensusParamEntry& current, const ConsensusParamEntry& proposed) {};
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(m_current);
+        READWRITE(m_proposed);
     }
 
     uint256 CalculateRoot() const;
@@ -113,8 +139,8 @@ public:
     // Only used pre-dynamic federation
     CProof proof;
     // Dynamic federation: Subsumes the proof field
-    ConsensusParameterMerkleTree m_cpmt;
-    CScriptWitness signblock_witness;
+    DynaFedParams m_dyna_params;
+    CScriptWitness m_signblock_witness;
 
     // Versionbits bit 27 has been redefined to dynamic blocks header version bit
     static const uint32_t DYNAMIC_MASK = (uint32_t)1 << 27;
@@ -138,7 +164,7 @@ public:
             READWRITE(nTime);
             READWRITE(block_height);
             if (this->nVersion & DYNAMIC_TREE_MASK) {
-                READWRITE(m_cpmt);
+                READWRITE(m_dyna_params);
             } else {
                 READWRITE(m_cpmt.m_cpmt_root);
             }

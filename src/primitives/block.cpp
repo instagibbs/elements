@@ -41,14 +41,20 @@ std::string CBlock::ToString() const
     return s.str();
 }
 
-uint256 ConsensusParameterMerkleTree::CalculateRoot() const
+uint256 ConsensusParamEntry::CalculateRoot() const
 {
     std::vector<uint256> leaves;
-    leaves.push_back(SerializeHash(c_sbs, SER_GETHASH, 0));
-    leaves.push_back(SerializeHash(c_fps, SER_GETHASH, 0));
-    leaves.push_back(SerializeHash(c_pe, SER_GETHASH, 0));
-    leaves.push_back(SerializeHash(p_sbs, SER_GETHASH, 0));
-    leaves.push_back(SerializeHash(p_fps, SER_GETHASH, 0));
-    leaves.push_back(SerializeHash(p_pe, SER_GETHASH, 0));
+    leaves.push_back(SerializeHash(signblockscript, SER_GETHASH, 0));
+    leaves.push_back(SerializeHash(sbs_wit_limit, SER_GETHASH, 0));
+    leaves.push_back(SerializeHash(fedpegscript, SER_GETHASH, 0));
+    leaves.push_back(SerializeHash(pak_entries, SER_GETHASH, 0));
+    return ComputeFastMerkleRoot(leaves);
+}
+
+uint256 DynaFedParams::CalculateRoot() const
+{
+    std::vector<uint256> leaves;
+    leaves.push_back(m_current.CalculateRoot());
+    leaves.push_back(m_proposed.CalculateRoot());
     return ComputeFastMerkleRoot(leaves);
 }
