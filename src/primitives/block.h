@@ -56,7 +56,7 @@ public:
 class ConsensusParamEntry
 {
 public:
-    unsigned char serialize_type; // Determines how it is serialized, defaults to null
+    unsigned char m_serialize_type; // Determines how it is serialized, defaults to null
     uint256 m_root;
     CScript m_signblockscript;
     uint32_t m_sbs_wit_limit; // Max block signature witness serialized size
@@ -65,16 +65,16 @@ public:
     std::vector<std::vector<unsigned char>> m_extension_space;
 
     // TODO Delete unused constructors such as below?
-    ConsensusParamEntry() { m_sbs_wit_limit = 0; serialize_type = 0; };
+    ConsensusParamEntry() { m_sbs_wit_limit = 0; m_serialize_type = 0; };
     // TODO pass in serialization, put everything behind private?
-    ConsensusParamEntry(const CScript& signblockscript_in, const uint32_t sbs_wit_limit_in, const CScript& fedpegscript_in, const std::vector<std::vector<unsigned char>> pak_entries_in) : signblockscript(signblockscript_in), sbs_wit_limit(sbs_wit_limit_in), fedpegscript(fedpegscript_in), pak_entries(pak_entries_in) { serialize_type = 0; m_root = CalculateRoot(); };
+    ConsensusParamEntry(const CScript& signblockscript_in, const uint32_t sbs_wit_limit_in, const CScript& fedpegscript_in, const std::vector<std::vector<unsigned char>> extension_space_in) : m_signblockscript(signblockscript_in), m_sbs_wit_limit(sbs_wit_limit_in), m_fedpegscript(fedpegscript_in), m_extension_space(extension_space_in) { m_serialize_type = 0; m_root = CalculateRoot(); };
 
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(serialize_type);
-        switch(serialize_type) {
+        READWRITE(m_serialize_type);
+        switch(m_serialize_type) {
             case 0:
                 /* Null entry, used to signal "no vote" proposal */
                 break;
@@ -87,12 +87,14 @@ public:
                 READWRITE(m_fedpegscript);
                 READWRITE(m_extension_space);
                 break;
+            default:
+                throw std::ios_base::failure("Invalid consensus parameter entry type");
         }
     }
 
     // TODO fix/remove this
     uint256 CalculateRoot() const;
-}
+};
 
 class DynaFedParams
 {
@@ -103,7 +105,8 @@ public:
     // Proposed rules for next epoch
     ConsensusParamEntry m_proposed;
 
-    ConsensusParamTree(const ConsensusParamEntry& current, const ConsensusParamEntry& proposed) {};
+    DynaFedParams() {};
+    DynaFedParams(const ConsensusParamEntry& current, const ConsensusParamEntry& proposed) {};
 
     ADD_SERIALIZE_METHODS;
 
@@ -163,12 +166,8 @@ public:
             READWRITE(hashMerkleRoot);
             READWRITE(nTime);
             READWRITE(block_height);
-            if (this->nVersion & DYNAMIC_TREE_MASK) {
-                READWRITE(m_dyna_params);
-            } else {
-                READWRITE(m_cpmt.m_cpmt_root);
-            }
-            READWRITE(signblock_witness.stack);
+            READWRITE(m_dyna_params);
+            READWRITE(m_signblock_witness.stack);
         } else {
             READWRITE(hashPrevBlock);
             READWRITE(hashMerkleRoot);
