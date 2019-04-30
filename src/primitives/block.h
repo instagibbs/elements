@@ -94,6 +94,11 @@ public:
 
     // TODO fix/remove this
     uint256 CalculateRoot() const;
+
+    bool IsNull()
+    {
+        return m_serialize_type == 0;
+    }
 };
 
 class DynaFedParams
@@ -117,6 +122,11 @@ public:
     }
 
     uint256 CalculateRoot() const;
+
+    bool IsNull()
+    {
+        return m_current.IsNull() && m_proposed.IsNull();
+    }
 };
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,

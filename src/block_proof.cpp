@@ -19,9 +19,19 @@ bool CheckChallenge(const CBlockHeader& block, const CBlockIndex& indexLast, con
     }
 }
 
-static bool CheckProofGeneric(const CBlockHeader& block, const uint32_t max_block_signature_size, const CScript& challenge, const CScript& solution)
+static bool CheckProofGeneric(const CBlockHeader& block, const uint32_t max_block_signature_size, const CScript& challenge, const CScript& scriptSig, const CScriptWitness& witness)
 {
-    if (solution.size() > max_block_signature_size) {
+    uint32_t wit_size = witness.GetSerializedSize();
+
+    // scriptSig or witness will be nonempty, but not both
+    // Former is for legacy blocksigning, latter for dynamic federations
+    assert(scriptSig.empty() != witness.IsNull());
+
+    if (scriptSig.size() > max_block_signature_size) {
+        return false;
+    }
+
+    if (witness.GetSerializedSize() > max_block_signature_size) {
         return false;
     }
 
@@ -36,13 +46,18 @@ static bool CheckProofGeneric(const CBlockHeader& block, const uint32_t max_bloc
         | SCRIPT_VERIFY_LOW_S // Stop easiest signature fiddling
         | SCRIPT_VERIFY_WITNESS // Required for cleanstack eval in VerifyScript
         | SCRIPT_NO_SIGHASH_BYTE; // non-Check(Multi)Sig signatures will not have sighash byte
-    return GenericVerifyScript(solution, challenge, proof_flags, block);
+    return GenericVerifyScript(scriptSig, witness, challenge, proof_flags, block);
 }
 
 bool CheckProof(const CBlockHeader& block, const Consensus::Params& params)
 {
     if (g_signed_blocks) {
-        return CheckProofGeneric(block, params.max_block_signature_size, params.signblockscript, block.proof.solution);
+        const DynaFedParams& d_params = block.m_dyna_params;
+        if (d_params.IsNull()) {
+            return CheckProofGeneric(block, params.max_block_signature_size, params.signblockscript, block.proof.solution);
+        } else {
+            return CheckProofGeneric(block, d_params.m_current.m_sbs_wit_limit, d_params.m_current.m_signblockscript, CScript(), block.m_signblock_witness);
+        }
     } else {
         return CheckProofOfWork(block.GetHash(), block.nBits, params);
     }
