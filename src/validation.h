@@ -411,9 +411,6 @@ bool IsNullDummyEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& 
 /** Check whether Dynamic Federation has activated. */
 bool IsDynaFedEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params);
 
-/** Check if the full Consensus Parameter Merkle Tree serialization is required for next block */
-bool ExtendedDynaFedHeaderRequired(const CBlockIndex* pindexPrev, const Consensus::Params& params);
-
 /** When there are blocks in the active chain with missing data, rewind the chainstate and remove them from the block index */
 bool RewindBlockIndex(const CChainParams& params);
 
@@ -486,11 +483,6 @@ extern VersionBitsCache versionbitscache;
  * Determine what nVersion a new block should use.
  */
 int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Params& params);
-
-/**
- * Get bits required by dynamic federations for blocks within this chain context.
- */
-int32_t ComputeRequiredDynamicBits(const CBlockIndex* pindexPrev, const Consensus::Params& params);
 
 /** Reject codes greater or equal to this can be returned by AcceptToMemPool
  * for transactions, to signal internal conditions. They cannot and should not

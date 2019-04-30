@@ -318,6 +318,10 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->proof          = diskindex.proof;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
+                // TODO how do we version this? do we need to? Or does CBlockIndex
+                // take care of that?
+                pindexNew->d_params       = diskindex.d_params;
+                pindexNew->m_signblock_witness = diskindex.m_signblock_witness;
 
                 const uint256 block_hash = pindexNew->GetBlockHash();
                 // Only validate one of every 1000 block header for sanity check

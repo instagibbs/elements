@@ -1786,8 +1786,10 @@ int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Para
     LOCK(cs_main);
     int32_t nVersion = VERSIONBITS_TOP_BITS;
 
-    // Add dynamic federation bits if necessary
-    nVersion |= ComputeRequiredDynamicBits(pindexPrev, params);
+    // Add dynamic federation bit if necessary
+    if (IsDynaFedEnabled(pindexPrev, params)) {
+        nVersion |= CBlockHeader::DYNAMIC_MASK;
+    }
 
     for (int i = 0; i < (int)Consensus::MAX_VERSION_BITS_DEPLOYMENTS; i++) {
         ThresholdState state = VersionBitsState(pindexPrev, params, static_cast<Consensus::DeploymentPos>(i), versionbitscache);
@@ -1817,7 +1819,7 @@ public:
     bool Condition(const CBlockIndex* pindex, const Consensus::Params& params) const override
     {
         // We do not warn about burned versionbits
-        if ((bit == 26 || bit == 27) && IsDynaFedEnabled(pindex, params)) return false;
+        if ((bit == 27) && IsDynaFedEnabled(pindex, params)) return false;
 
         return ((pindex->nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS) &&
                ((pindex->nVersion >> bit) & 1) != 0 &&
@@ -3342,28 +3344,6 @@ bool IsDynaFedEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& pa
     return (VersionBitsState(pindexPrev, params, Consensus::DEPLOYMENT_DYNA_FED, versionbitscache) == ThresholdState::ACTIVE);
 }
 
-bool ExtendedDynaFedHeaderRequired(const CBlockIndex* pindexPrev, const Consensus::Params& params)
-{
-    LOCK(cs_main);
-    // TODO Add transition logic to ellide fields when not transitioning
-    return true;
-}
-
-int32_t ComputeRequiredDynamicBits(const CBlockIndex* pindexPrev, const Consensus::Params& params)
-{
-    LOCK(cs_main);
-    int32_t nVersion = 0;
-    // We always signal dynamic federations when active
-    if (IsDynaFedEnabled(pindexPrev, params)) {
-        nVersion |= CBlockHeader::DYNAMIC_MASK;
-
-        if (ExtendedDynaFedHeaderRequired(pindexPrev, params)) {
-            nVersion |= CBlockHeader::DYNAMIC_TREE_MASK;
-        }
-    }
-    return nVersion;
-}
-
 // Compute at which vout of the block's coinbase transaction the witness
 // commitment occurs, or -1 if not found.
 static int GetWitnessCommitmentIndex(const CBlock& block)
@@ -3514,15 +3494,16 @@ static bool ContextualCheckDynaFedHeader(const CBlockHeader& block, CValidationS
         return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block headers must have non-empty current signblockscript field");
     }
 
-    // Check if block has the right bits set for dynamic federations
-    if ((((block.nVersion & CBlockHeader::DYNAMIC_MASKS) ^ ComputeRequiredDynamicBits(pindexPrev, params.GetConsensus())) != 0)) {
+    // Check if block has the right bit set for dynamic federations
+    if ((block.nVersion & CBlockHeader::DYNAMIC_MASK) == 0) {
         return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "block header version is not the required value for dynamic federations");
     }
 
     const uint32_t epoch_length = params.GetConsensus().dynamic_epoch_length;
-    uint32_t epoch_height = block.block_height - (block.block_height % epoch_length);
+    uint32_t epoch_age = block.block_height % epoch_length;
+    uint32_t epoch_start_height = block.block_height - epoch_age;
 
-    const CBlockIndex* p_epoch_start = pindexPrev->GetAncestor(epoch_height);
+    const CBlockIndex* p_epoch_start = pindexPrev->GetAncestor(epoch_start_height);
 
     // TODO Make sure this cannot be hit
     assert(p_epoch_start);
@@ -3532,23 +3513,37 @@ static bool ContextualCheckDynaFedHeader(const CBlockHeader& block, CValidationS
     if (!IsDynaFedEnabled(p_epoch_start, consensus)) {
         // Make sure the signblockscript and fedpegscript match
         if (consensus.signblockscript != d_params.m_current.m_signblockscript) {
-            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not math static's during first dynamic epoch");
+            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not match static's during first dynamic epoch");
         }
         if (consensus.fedpegScript != d_params.m_current.m_fedpegscript) {
-            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not math static's during first dynamic epoch");
+            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not match static's during first dynamic epoch");
         }
+        // Get hardcoded extension space from chainparams
         if (consensus.first_extension_space != d_params.m_current.m_extension_space) {
-            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's extension space does not math static's during first dynamic epoch");
+            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's extension space does not match static's during first dynamic epoch");
         }
     } else {
+        if (epoch_age == 0) {
+            // Transition just occurred, tally votes first, then confirm the winning
+            // candidate matches
+            // TODO implement behavior
+        } else {
+            const DynaFedParams& d_params_epoch = p_epoch_start->d_params;
+            // No transition, just make sure fields match
 
+            // Make sure the signblockscript and fedpegscript match
+            if (d_params_epoch.m_current.m_signblockscript != d_params.m_current.m_signblockscript) {
+                return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not match epoch starts'");
+            }
+            if (d_params_epoch.m_current.m_fedpegscript != d_params.m_current.m_fedpegscript) {
+                return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not match epoch starts'");
+            }
+            // Get hardcoded extension space from chainparams
+            if (d_params_epoch.m_current.m_extension_space != d_params.m_current.m_extension_space) {
+                return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's extension space does not match epoch starts'");
+            }
+        }
     }
-
-    // TODO: Check for validity of current parameters and publication "level":
-    //       0) Dynamic federations just activated, use signblockscript/fedpegscript
-    //       and pak list as of previous block as current parameters. v2 of each required
-    //       1) If dynafed transition just happened, proposed becomes current
-    //       2) If no transition, same as previous blocks' current
 
     return true;
 }

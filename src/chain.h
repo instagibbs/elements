@@ -213,6 +213,9 @@ public:
     uint32_t nBits;
     uint32_t nNonce;
     CProof proof;
+    // Dynamic federation fields
+    DynaFedParams d_params;
+    CScriptWitness m_signblock_witness; // TODO, do we even need this?
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId;
@@ -242,6 +245,8 @@ public:
         nBits          = 0;
         nNonce         = 0;
         proof.SetNull();
+        d_params = DynaFedParams(); // TODO make SetNull()
+        m_signblock_witness.SetNull();
     }
 
     CBlockIndex()
@@ -259,6 +264,8 @@ public:
         nBits          = block.nBits;
         nNonce         = block.nNonce;
         proof          = block.proof;
+        d_params       = block.m_dyna_params;
+        m_signblock_witness = block.m_signblock_witness;
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -293,6 +300,8 @@ public:
         block.nBits          = nBits;
         block.nNonce         = nNonce;
         block.proof          = proof;
+        block.m_dyna_params  = d_params;
+        block.m_signblock_witness = m_signblock_witness;
         return block;
     }
 
@@ -412,7 +421,12 @@ public:
         READWRITE(nTime);
         // For compatibility with elements 0.14 based chains
         if (g_signed_blocks) {
-            READWRITE(proof);
+            if (this->nVersion & CBlockHeader::DYNAMIC_MASK) {
+                READWRITE(d_params);
+                READWRITE(m_signblock_witness.stack);
+            } else {
+                READWRITE(proof);
+            }
         } else {
             READWRITE(nBits);
             READWRITE(nNonce);

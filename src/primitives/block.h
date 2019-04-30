@@ -157,9 +157,6 @@ public:
 
     // Versionbits bit 27 has been redefined to dynamic blocks header version bit
     static const uint32_t DYNAMIC_MASK = (uint32_t)1 << 27;
-    // Versionbits bit 26 has been redefined to dynamic blocks full cpmt serialization bit
-    static const uint32_t DYNAMIC_TREE_MASK = (uint32_t)1 << 26;
-    static const uint32_t DYNAMIC_MASKS = DYNAMIC_MASK | DYNAMIC_TREE_MASK;
 
     CBlockHeader()
     {
@@ -177,7 +174,9 @@ public:
             READWRITE(nTime);
             READWRITE(block_height);
             READWRITE(m_dyna_params);
-            READWRITE(m_signblock_witness.stack);
+            if (!(s.GetType() & SER_GETHASH)) {
+                READWRITE(m_signblock_witness.stack);
+            }
         } else {
             READWRITE(hashPrevBlock);
             READWRITE(hashMerkleRoot);
