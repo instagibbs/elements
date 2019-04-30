@@ -61,8 +61,12 @@ bool CheckProof(const CBlockHeader& block, const Consensus::Params& params)
     }
 }
 
-// TODO DYNAFED: Use RPC to get parent signblockscript
 bool CheckProofSignedParent(const CBlockHeader& block, const Consensus::Params& params)
 {
-    return CheckProofGeneric(block, params.max_block_signature_size, params.parent_chain_signblockscript, block.proof.solution, CScriptWitness());
+    const DynaFedParams& d_params = block.m_dyna_params;
+    if (d_params.IsNull()) {
+        return CheckProofGeneric(block, params.max_block_signature_size, params.parent_chain_signblockscript, block.proof.solution, CScriptWitness());
+    } else {
+        return CheckProofGeneric(block, d_params.m_current.m_sbs_wit_limit, d_params.m_current.m_signblockscript, CScript(), block.m_signblock_witness);
+    }
 }
