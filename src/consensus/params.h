@@ -100,6 +100,7 @@ struct Params {
     CScript signblockscript;
     uint32_t max_block_signature_size;
     // g_signed_blocks - Whether blocks are signed or not, get around circular dep
+    uint32_t dynamic_epoch_length;
 };
 } // namespace Consensus
 

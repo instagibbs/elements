@@ -3506,14 +3506,45 @@ static bool ContextualCheckDynaFedHeader(const CBlockHeader& block, CValidationS
     if (!IsDynaFedEnabled(pindexPrev, params.GetConsensus())) {
         return true;
     }
+
+    const DynaFedParams& d_params = block.m_dyna_params;
+
+    // Dynamic blocks must at least publish current signblockscript in full
+    if (d_params.m_current.IsNull()) {
+        return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block headers must have non-empty current signblockscript field");
+    }
+
     // Check if block has the right bits set for dynamic federations
     if ((((block.nVersion & CBlockHeader::DYNAMIC_MASKS) ^ ComputeRequiredDynamicBits(pindexPrev, params.GetConsensus())) != 0)) {
         return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "block header version is not the required value for dynamic federations");
     }
 
-    // TODO: Check for validity of current parameters:
+    const uint32_t epoch_length = params.GetConsensus().dynamic_epoch_length;
+    uint32_t epoch_height = block.block_height - (block.block_height % epoch_length);
+
+    const CBlockIndex* p_epoch_start = pindexPrev->GetAncestor(epoch_height);
+
+    // TODO Make sure this cannot be hit
+    assert(p_epoch_start);
+
+    // If dynamic federations wasn't enabled here, handle specially
+    const Consensus::Params& consensus = params.GetConsensus();
+    if (!IsDynaFedEnabled(p_epoch_start, consensus)) {
+        // Make sure the signblockscript and fedpegscript match
+        if (consensus.signblockscript != d_params.m_current.m_signblockscript) {
+            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not math static's during first dynamic epoch");
+        }
+        if (consensus.fedpegScript != d_params.m_current.m_fedpegscript) {
+            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not math static's during first dynamic epoch");
+        }
+
+    } else {
+
+    }
+
+    // TODO: Check for validity of current parameters and publication "level":
     //       0) Dynamic federations just activated, use signblockscript/fedpegscript
-    //       and pak list as of previous block as current parameters.
+    //       and pak list as of previous block as current parameters. v2 of each required
     //       1) If dynafed transition just happened, proposed becomes current
     //       2) If no transition, same as previous blocks' current
 

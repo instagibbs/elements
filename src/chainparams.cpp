@@ -475,6 +475,8 @@ class CCustomParams : public CRegTestParams {
 
         consensus.nMinimumChainWork = uint256S(args.GetArg("-con_nminimumchainwork", "0x0"));
         consensus.defaultAssumeValid = uint256S(args.GetArg("-con_defaultassumevalid", "0x00"));
+        // TODO: Embed in genesis block in nTime field with new genesis block type
+        consensus.dynamic_epoch_length = args.GetArg("-dynamic_epoch_length", 1728);
 
         nPruneAfterHeight = (uint64_t)args.GetArg("-npruneafterheight", nPruneAfterHeight);
         fDefaultConsistencyChecks = args.GetBoolArg("-fdefaultconsistencychecks", fDefaultConsistencyChecks);
@@ -612,6 +614,10 @@ class CCustomParams : public CRegTestParams {
             if (initialFreeCoins != 0 || initial_reissuance_tokens != 0) {
                 AppendInitialIssuance(genesis, COutPoint(uint256(commit), 0), parentGenesisBlockHash, (initialFreeCoins > 0) ? 1 : 0, initialFreeCoins, (initial_reissuance_tokens > 0) ? 1 : 0, initial_reissuance_tokens, CScript() << OP_TRUE);
             }
+        } else if (consensus.genesis_style == "dynamic") {
+            // Liquid v2 HF, from genesis. Upgrading networks still use "elements".
+            // TODO fill out genesis block with special commitments including epoch
+            // length in nTime
         } else {
             throw std::runtime_error(strprintf("Invalid -genesis_style (%s)", consensus.genesis_style));
         }
