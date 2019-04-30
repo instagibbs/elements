@@ -3537,7 +3537,9 @@ static bool ContextualCheckDynaFedHeader(const CBlockHeader& block, CValidationS
         if (consensus.fedpegScript != d_params.m_current.m_fedpegscript) {
             return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not math static's during first dynamic epoch");
         }
-
+        if (consensus.first_extension_space != d_params.m_current.m_extension_space) {
+            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's extension space does not math static's during first dynamic epoch");
+        }
     } else {
 
     }

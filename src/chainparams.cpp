@@ -477,6 +477,8 @@ class CCustomParams : public CRegTestParams {
         consensus.defaultAssumeValid = uint256S(args.GetArg("-con_defaultassumevalid", "0x00"));
         // TODO: Embed in genesis block in nTime field with new genesis block type
         consensus.dynamic_epoch_length = args.GetArg("-dynamic_epoch_length", 1728);
+        // TODO: pass in serialized vector of byte vectors, parse into extension space
+        consensus.first_extension_space = {ParseHex("00"), ParseHex("00")};
 
         nPruneAfterHeight = (uint64_t)args.GetArg("-npruneafterheight", nPruneAfterHeight);
         fDefaultConsistencyChecks = args.GetBoolArg("-fdefaultconsistencychecks", fDefaultConsistencyChecks);
