@@ -99,6 +99,15 @@ public:
     {
         return m_serialize_type == 0;
     }
+
+    void SetNull()
+    {
+        m_serialize_type = 0;
+        m_root = uint256();
+        m_signblockscript = CScript();
+        m_sbs_wit_limit = 0;
+        m_fedpegscript = CScript();
+    }
 };
 
 class DynaFedParams
@@ -126,6 +135,12 @@ public:
     bool IsNull() const
     {
         return m_current.IsNull() && m_proposed.IsNull();
+    }
+
+    void SetNull()
+    {
+        m_current.SetNull();
+        m_proposed.SetNull();
     }
 };
 

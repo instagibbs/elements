@@ -245,7 +245,7 @@ public:
         nBits          = 0;
         nNonce         = 0;
         proof.SetNull();
-        d_params = DynaFedParams(); // TODO make SetNull()
+        d_params.SetNull();
         m_signblock_witness.SetNull();
     }
 
