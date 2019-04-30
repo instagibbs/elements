@@ -33,7 +33,7 @@ static bool CheckProofGeneric(const CBlockHeader& block, const uint32_t max_bloc
         return false;
     }
 
-    // Some anti-DoS flags, though consensus.max_block_signature_size caps the possible
+    // Some anti-DoS flags, though max_block_signature_size caps the possible
     // danger in malleation of the block witness data.
     unsigned int proof_flags = SCRIPT_VERIFY_P2SH // For cleanstack evalution under segwit flag
         | SCRIPT_VERIFY_STRICTENC // Minimally-sized DER sigs
