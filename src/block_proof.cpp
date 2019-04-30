@@ -42,7 +42,7 @@ static bool CheckProofGeneric(const CBlockHeader& block, const uint32_t max_bloc
         | SCRIPT_VERIFY_MINIMALDATA // Pushes are minimally-sized
         | SCRIPT_VERIFY_SIGPUSHONLY // Witness is push-only
         | SCRIPT_VERIFY_LOW_S // Stop easiest signature fiddling
-        | SCRIPT_VERIFY_WITNESS // Required for cleanstack eval in VerifyScript
+        | SCRIPT_VERIFY_WITNESS // Witness and to enforce cleanstack
         | SCRIPT_NO_SIGHASH_BYTE; // non-Check(Multi)Sig signatures will not have sighash byte
     return GenericVerifyScript(scriptSig, witness, challenge, proof_flags, block);
 }
