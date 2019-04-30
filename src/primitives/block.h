@@ -95,7 +95,7 @@ public:
     // TODO fix/remove this
     uint256 CalculateRoot() const;
 
-    bool IsNull()
+    bool IsNull() const
     {
         return m_serialize_type == 0;
     }
@@ -123,7 +123,7 @@ public:
 
     uint256 CalculateRoot() const;
 
-    bool IsNull()
+    bool IsNull() const
     {
         return m_current.IsNull() && m_proposed.IsNull();
     }

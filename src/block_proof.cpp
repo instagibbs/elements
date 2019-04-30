@@ -21,8 +21,6 @@ bool CheckChallenge(const CBlockHeader& block, const CBlockIndex& indexLast, con
 
 static bool CheckProofGeneric(const CBlockHeader& block, const uint32_t max_block_signature_size, const CScript& challenge, const CScript& scriptSig, const CScriptWitness& witness)
 {
-    uint32_t wit_size = witness.GetSerializedSize();
-
     // scriptSig or witness will be nonempty, but not both
     // Former is for legacy blocksigning, latter for dynamic federations
     assert(scriptSig.empty() != witness.IsNull());
@@ -54,7 +52,7 @@ bool CheckProof(const CBlockHeader& block, const Consensus::Params& params)
     if (g_signed_blocks) {
         const DynaFedParams& d_params = block.m_dyna_params;
         if (d_params.IsNull()) {
-            return CheckProofGeneric(block, params.max_block_signature_size, params.signblockscript, block.proof.solution);
+            return CheckProofGeneric(block, params.max_block_signature_size, params.signblockscript, block.proof.solution, CScriptWitness());
         } else {
             return CheckProofGeneric(block, d_params.m_current.m_sbs_wit_limit, d_params.m_current.m_signblockscript, CScript(), block.m_signblock_witness);
         }
@@ -66,5 +64,5 @@ bool CheckProof(const CBlockHeader& block, const Consensus::Params& params)
 // TODO DYNAFED: Use RPC to get parent signblockscript
 bool CheckProofSignedParent(const CBlockHeader& block, const Consensus::Params& params)
 {
-    return CheckProofGeneric(block, params.max_block_signature_size, params.parent_chain_signblockscript, block.proof.solution);
+    return CheckProofGeneric(block, params.max_block_signature_size, params.parent_chain_signblockscript, block.proof.solution, CScriptWitness());
 }
