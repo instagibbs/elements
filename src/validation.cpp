@@ -3577,7 +3577,7 @@ static bool ContextualCheckDynaFedHeader(const CBlockHeader& block, CValidationS
             if (!d_params.m_current.m_fedpegscript.empty() ||
                     !d_params.m_current.m_extension_space.empty()){
                 return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block has unnecessary non-null fields: fedpegscript or extension space");
-        }
+            }
 
         }
     }

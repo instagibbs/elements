@@ -177,6 +177,7 @@ static bool CheckPeginTx(const std::vector<unsigned char>& tx_data, T& pegtx, co
         return false;
     }
 
+    // TODO get current and previous epoch's fedpegscript
     // Check that the witness program matches the p2ch on the p2sh-p2wsh transaction output
     CScript tweaked_fedpegscript = calculate_contract(Params().GetConsensus().fedpegScript, claim_script);
     CScript witness_output(GetScriptForWitness(tweaked_fedpegscript));
