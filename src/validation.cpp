@@ -3515,33 +3515,70 @@ static bool ContextualCheckDynaFedHeader(const CBlockHeader& block, CValidationS
         if (consensus.signblockscript != d_params.m_current.m_signblockscript) {
             return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not match static's during first dynamic epoch");
         }
-        if (consensus.fedpegScript != d_params.m_current.m_fedpegscript) {
-            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not match static's during first dynamic epoch");
-        }
-        // Get hardcoded extension space from chainparams
-        if (consensus.first_extension_space != d_params.m_current.m_extension_space) {
-            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's extension space does not match static's during first dynamic epoch");
+        // Since dynafed is active, but epoch start isn't, by definition we
+        // just need to publish/validate the signblockscript
+        if (!d_params.m_current.m_fedpegscript.empty() ||
+                !d_params.m_current.m_extension_space.empty()){
+            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block has unnecessary non-null fields: fedpegscript or extension space");
         }
     } else {
+        // TODO put this into something we can unit-test
+        // This clause is never hit for genesis block(we do not validate gen block),
+        // so previous epoch must exist
+        ConsensusParamEntry winning_proposal;
         if (epoch_age == 0) {
+            uint32_t prev_epoch_start_height = epoch_start_height-epoch_length;
             // Transition just occurred, tally votes first, then confirm the winning
             // candidate matches
-            // TODO implement behavior
-        } else {
-            const DynaFedParams& d_params_epoch = p_epoch_start->d_params;
-            // No transition, just make sure fields match
+            std::map<uint256, uint32_t> vote_tally;
+            for (unsigned int height = epoch_start_height-1; height >= prev_epoch_start_height; --height) {
+                const CBlockIndex* p_epoch_walk = pindexPrev->GetAncestor(height);
+                assert(p_epoch_walk);
+                const ConsensusParamEntry& proposal = p_epoch_walk->d_params.m_proposed;
+                const uint256 proposal_root = proposal.CalculateRoot();
+                vote_tally[proposal_root]++;
+                // Short-circuit once 4/5 threshhold is reached
+                if (vote_tally[proposal_root] >= (consensus.dynamic_epoch_length/5)*4) {
+                    winning_proposal = proposal;
+                    break;
+                }
+                // Also stop early if "no-vote" crosses 1/4
+                if (proposal_root.IsNull() &&
+                        vote_tally[proposal_root] > consensus.dynamic_epoch_length/5) {
+                    break;
+                }
+            }
 
-            // Make sure the signblockscript and fedpegscript match
-            if (d_params_epoch.m_current.m_signblockscript != d_params.m_current.m_signblockscript) {
-                return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not match epoch starts'");
+            // If "no-vote" takes it, we need to put in place the previous epoch's current
+            if (winning_proposal.IsNull()) {
+                const CBlockIndex* p_prev_epoch_start = pindexPrev->GetAncestor(prev_epoch_start_height);
+                assert(p_prev_epoch_start);
+                winning_proposal = p_prev_epoch_start->d_params.m_current;
+                assert(!winning_proposal.IsNull());
             }
-            if (d_params_epoch.m_current.m_fedpegscript != d_params.m_current.m_fedpegscript) {
-                return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not match epoch starts'");
+        }
+
+        // Select which to enforce based on vote: "current" at start of previous epoch,
+        // or the winning non-no-vote.
+        const ConsensusParamEntry& enforced_current_params = winning_proposal.IsNull() ? p_epoch_start->d_params.m_current : winning_proposal;
+
+        // Make sure the signblockscript and fedpegscript match
+        if (enforced_current_params.m_signblockscript != d_params.m_current.m_signblockscript) {
+            return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not match epoch starts'");
+        }
+        if (epoch_age == 0) {
+            if (enforced_current_params.m_fedpegscript != d_params.m_current.m_fedpegscript) {
+                return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's signblockscript does not match previous epoch's");
             }
-            // Get hardcoded extension space from chainparams
-            if (d_params_epoch.m_current.m_extension_space != d_params.m_current.m_extension_space) {
-                return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's extension space does not match epoch starts'");
+            if (enforced_current_params.m_extension_space != d_params.m_current.m_extension_space) {
+                return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block header's extension space does not match previous epoch's");
             }
+        } else {
+            if (!d_params.m_current.m_fedpegscript.empty() ||
+                    !d_params.m_current.m_extension_space.empty()){
+                return state.Invalid(false, REJECT_INVALID, "invalid-dyna-fed", "dynamic block has unnecessary non-null fields: fedpegscript or extension space");
+        }
+
         }
     }
 

@@ -92,12 +92,16 @@ public:
         }
     }
 
-    // TODO fix/remove this
     uint256 CalculateRoot() const;
 
     bool IsNull() const
     {
-        return m_serialize_type == 0;
+        return m_serialize_type == 0 &&
+            m_root.IsNull() &&
+            m_signblockscript.empty() &&
+            m_sbs_wit_limit == 0 &&
+            m_fedpegscript.empty();
+
     }
 
     void SetNull()
