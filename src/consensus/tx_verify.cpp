@@ -162,6 +162,7 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i
         CTxOut prevout;
         if (tx.vin[i].m_is_pegin) {
             std::string err;
+            // TODO give access to fedpegscripts
             if (tx.witness.vtxinwit.size() <= i || !IsValidPeginWitness(tx.witness.vtxinwit[i].m_pegin_witness, tx.vin[i].prevout, err, true)) {
                 continue;
             }
@@ -253,6 +254,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
         if (tx.vin[i].m_is_pegin) {
             // Check existence and validity of pegin witness
             std::string err;
+            // TODO give accesss to fedpegscripts
             if (tx.witness.vtxinwit.size() <= i || !IsValidPeginWitness(tx.witness.vtxinwit[i].m_pegin_witness, prevout, err, true)) {
                 return state.DoS(0, false, REJECT_PEGIN, "bad-pegin-witness", false, err);
             }

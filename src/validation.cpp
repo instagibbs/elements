@@ -1637,6 +1637,7 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out, cons
         view.AddCoin(out, std::move(undo), !fClean);
     } else {
         std::string err;
+        // TODO need access to block index here, get values for the current(?) block
         if (!IsValidPeginWitness(pegin_witness, txin.prevout, err, false)) {
             fClean = fClean && error("%s: peg-in occurred without proof", __func__);
         } else {

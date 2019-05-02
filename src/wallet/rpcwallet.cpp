@@ -5047,6 +5047,7 @@ unsigned int GetPeginTxnOutputIndex(const T_tx& txn, const CScript& witnessProgr
 {
     unsigned int nOut = 0;
     //Call contracthashtool
+    // TODO support multiple fedpegscripts, or at least the latest.
     CScript mainchain_script = GetScriptForDestination(ScriptHash(GetScriptForWitness(calculate_contract(Params().GetConsensus().fedpegScript, witnessProgram))));
     for (; nOut < txn.vout.size(); nOut++)
         if (txn.vout[nOut].scriptPubKey == mainchain_script)
@@ -5214,6 +5215,7 @@ static UniValue createrawpegin(const JSONRPCRequest& request, T_tx_ref& txBTCRef
     // Peg-in witness isn't valid, even though the block header is(without depth check)
     // We re-check depth before returning with more descriptive result
     std::string err;
+    // TODO need access to chaintip to compute fedpegscript
     if (!IsValidPeginWitness(pegin_witness, mtx.vin[0].prevout, err, false)) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Constructed peg-in witness is invalid.");
     }
