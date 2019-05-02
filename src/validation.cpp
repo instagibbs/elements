@@ -721,8 +721,10 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         if (!CheckSequenceLocks(tx, STANDARD_LOCKTIME_VERIFY_FLAGS, &lp))
             return state.DoS(0, false, REJECT_NONSTANDARD, "non-BIP68-final");
 
+        // TODO, we are accepting fedpegscripts into mempool based on current
+        // block. During transitions we should re-evaluate peg-ins in mempool
         CAmountMap fee_map;
-        if (!Consensus::CheckTxInputs(tx, state, view, GetSpendHeight(view), fee_map, setPeginsSpent, NULL, true, true)) {
+        if (!Consensus::CheckTxInputs(tx, state, view, chainActive.Tip(), GetSpendHeight(view), fee_map, setPeginsSpent, NULL, true, true)) {
             return error("%s: Consensus::CheckTxInputs: %s, %s", __func__, tx.GetHash().ToString(), FormatStateMessage(state));
         }
 
@@ -1605,7 +1607,7 @@ static bool AbortNode(CValidationState& state, const std::string& strMessage, co
  * @param out The out point that corresponds to the tx input.
  * @return A DisconnectResult as an int
  */
-int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out, const CTxIn& txin, const CScriptWitness& pegin_witness)
+int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out, const CTxIn& txin, const CScriptWitness& pegin_witness, const std::vector<CScript>& fedpegscripts)
 {
     bool fClean = true;
 
@@ -1637,8 +1639,7 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out, cons
         view.AddCoin(out, std::move(undo), !fClean);
     } else {
         std::string err;
-        // TODO need access to block index here, get values for the current(?) block
-        if (!IsValidPeginWitness(pegin_witness, txin.prevout, err, false)) {
+        if (!IsValidPeginWitness(pegin_witness, fedpegscripts, txin.prevout, err, false)) {
             fClean = fClean && error("%s: peg-in occurred without proof", __func__);
         } else {
             std::pair<uint256, COutPoint> outpoint = std::make_pair(uint256(pegin_witness.stack[2]), txin.prevout);
@@ -1709,7 +1710,9 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
             for (unsigned int j = tx.vin.size(); j-- > 0;) {
                 const COutPoint &out = tx.vin[j].prevout;
                 const CScriptWitness& pegin_wit = tx.witness.vtxinwit.size() > j ? tx.witness.vtxinwit[j].m_pegin_witness : CScriptWitness();
-                int res = ApplyTxInUndo(std::move(txundo.vprevout[j]), view, out, tx.vin[j], pegin_wit);
+                // TODO Make sure this is the right height to get scripts from
+                const std::vector<CScript> fedpegscripts = GetValidFedpegScripts(pindex, Params().GetConsensus());
+                int res = ApplyTxInUndo(std::move(txundo.vprevout[j]), view, out, tx.vin[j], pegin_wit, fedpegscripts);
                 if (res == DISCONNECT_FAILED) return DISCONNECT_FAILED;
                 fClean = fClean && res != DISCONNECT_UNCLEAN;
             }
@@ -2122,7 +2125,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         {
             std::vector<CCheck*> vChecks;
             bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */
-            if (!Consensus::CheckTxInputs(tx, state, view, pindex->nHeight, fee_map,
+            if (!Consensus::CheckTxInputs(tx, state, view, pindex, pindex->nHeight, fee_map,
                         setPeginsSpent == NULL ? setPeginsSpentDummy : *setPeginsSpent,
                         nScriptCheckThreads ? &vChecks : NULL, fCacheResults, fScriptChecks)) {
                 return error("%s: Consensus::CheckTxInputs: %s, %s", __func__, tx.GetHash().ToString(), FormatStateMessage(state));

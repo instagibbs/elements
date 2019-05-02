@@ -919,6 +919,9 @@ UniValue SignTransaction(CMutableTransaction& mtx, const UniValue& prevTxsUnival
     // Script verification errors
     UniValue vErrors(UniValue::VARR);
 
+    // TODO Have fedpegscript passed in optionally or perhaps always
+    const std::vector<CScript> fedpegscripts = {Params().GetConsensus().fedpegScript};
+
     // ELEMENTS:
     // Track an immature peg-in that's otherwise valid, give warning
     bool immature_pegin = false;
@@ -937,12 +940,12 @@ UniValue SignTransaction(CMutableTransaction& mtx, const UniValue& prevTxsUnival
         if (!txin.m_is_pegin && coin.IsSpent()) {
             TxInErrorToJSON(txin, inWitness, vErrors, "Input not found or already spent");
             continue;
-        } else if (txin.m_is_pegin && (txConst.witness.vtxinwit.size() <= i || !IsValidPeginWitness(txConst.witness.vtxinwit[i].m_pegin_witness, txin.prevout, err, false))) {
+        } else if (txin.m_is_pegin && (txConst.witness.vtxinwit.size() <= i || !IsValidPeginWitness(txConst.witness.vtxinwit[i].m_pegin_witness, fedpegscripts, txin.prevout, err, false))) {
             TxInErrorToJSON(txin, inWitness, vErrors, "Peg-in input has invalid proof.");
             continue;
         }
         // Report warning about immature peg-in though
-        if(txin.m_is_pegin && !IsValidPeginWitness(txConst.witness.vtxinwit[i].m_pegin_witness, txin.prevout, err, true)) {
+        if(txin.m_is_pegin && !IsValidPeginWitness(txConst.witness.vtxinwit[i].m_pegin_witness, fedpegscripts, txin.prevout, err, true)) {
             assert(err == "Needs more confirmations.");
             immature_pegin = true;
         }

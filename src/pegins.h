@@ -10,6 +10,7 @@
 #include <primitives/bitcoin/transaction.h>
 #include <primitives/transaction.h>
 #include <script/script.h>
+#include <chain.h>
 
 /** Calculates script necessary for p2ch peg-in transactions */
 CScript calculate_contract(const CScript& federationRedeemScript, const CScript& witnessProgram);
@@ -30,5 +31,8 @@ CTxOut GetPeginOutputFromWitness(const CScriptWitness& pegin_witness);
  * stack except OP_CMS. End if, then push OP_CMS.
  */
 bool MatchLiquidWatchman(const CScript& script);
+
+/** Get full fedpegscripts from two previous epoch starts based on given index */
+std::vector<CScript> GetValidFedpegScripts(const CBlockIndex* pblockindex, const Consensus::Params& params);
 
 #endif // BITCOIN_PEGINS_H

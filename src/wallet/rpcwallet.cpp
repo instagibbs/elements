@@ -5216,7 +5216,8 @@ static UniValue createrawpegin(const JSONRPCRequest& request, T_tx_ref& txBTCRef
     // We re-check depth before returning with more descriptive result
     std::string err;
     // TODO need access to chaintip to compute fedpegscript
-    if (!IsValidPeginWitness(pegin_witness, mtx.vin[0].prevout, err, false)) {
+    const std::vector<CScript> fedpegscripts = GetValidFedpegScripts(chainActive.Tip(), Params().GetConsensus());
+    if (!IsValidPeginWitness(pegin_witness, fedpegscripts, mtx.vin[0].prevout, err, false)) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Constructed peg-in witness is invalid.");
     }
 

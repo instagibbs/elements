@@ -452,3 +452,34 @@ bool MatchLiquidWatchman(const CScript& script)
     // No more pushes
     return (it == script.end());
 }
+
+std::vector<CScript> GetValidFedpegScripts(const CBlockIndex* pblockindex, const Consensus::Params& params)
+{
+    assert(pblockindex);
+
+    const uint32_t epoch_length = params.dynamic_epoch_length;
+    uint32_t epoch_age = pblockindex->nHeight % epoch_length;
+    uint32_t epoch_start_height = pblockindex->nHeight - epoch_age;
+
+    const CBlockIndex* p_epoch_one_start = pblockindex->GetAncestor(epoch_start_height-epoch_length);
+    const CBlockIndex* p_epoch_two_start = pblockindex->GetAncestor(epoch_start_height);
+
+    std::vector<CScript> fedpegscripts;
+    if (p_epoch_one_start) {
+        if (!p_epoch_one_start->d_params.IsNull()) {
+            fedpegscripts.push_back(p_epoch_one_start->d_params.m_current.m_fedpegscript);
+        } else {
+            fedpegscripts.push_back(params.fedpegScript);
+        }
+    }
+
+    // TODO if the same, only return 1
+    if (p_epoch_two_start) {
+        if (!p_epoch_two_start->d_params.IsNull()) {
+            fedpegscripts.push_back(p_epoch_two_start->d_params.m_current.m_fedpegscript);
+        } else {
+            fedpegscripts.push_back(params.fedpegScript);
+        }
+    }
+    return fedpegscripts;
+}
