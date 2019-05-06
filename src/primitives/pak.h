@@ -64,7 +64,7 @@ public:
     /** Produce a list of scripts to add to the coinbase to signal changes in PAK list or rejection of any pak proofs to nodes */
     void CreateCommitments(std::vector<CScript> &commitments) const;
 
-    static bool FromBytes(CPAKList &paklist, std::vector<std::vector<unsigned char> >& offline_keys, std::vector<std::vector<unsigned char> >& online_keys, bool is_reject);
+    static bool FromBytes(CPAKList &paklist, const std::vector<std::vector<unsigned char> >& offline_keys, const std::vector<std::vector<unsigned char> >& online_keys, bool is_reject);
     void ToBytes(std::vector<std::vector<unsigned char> >& offline_keys, std::vector<std::vector<unsigned char> >& online_keys, bool &is_reject) const;
 };
 
@@ -75,9 +75,6 @@ public:
  **/
 bool ScriptHasValidPAKProof(const CScript& script, const uint256& genesis_hash);
 
-// ELEMENTS:
-extern boost::optional<CPAKList> g_paklist_config;
-extern CPAKList g_paklist_blockchain;
-///////////
+CPAKList GetActivePAKList(const CBlockIndex* pblockindex, const Consensus::Params& params);
 
 #endif // BITCOIN_PRIMITIVES_PAK_H

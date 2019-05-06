@@ -112,7 +112,7 @@ bool CPAKList::operator==(const CPAKList &other) const
     return true;
 }
 
-bool CPAKList::FromBytes(CPAKList &paklist, std::vector<std::vector<unsigned char> >& offline_keys_bytes, std::vector<std::vector<unsigned char> >& online_keys_bytes, bool is_reject)
+bool CPAKList::FromBytes(CPAKList &paklist, const std::vector<std::vector<unsigned char> >& offline_keys_bytes, const std::vector<std::vector<unsigned char> >& online_keys_bytes, bool is_reject)
 {
     if(offline_keys_bytes.size() != online_keys_bytes.size()
         || offline_keys_bytes.size() > SECP256K1_WHITELIST_MAX_N_KEYS) {
@@ -242,4 +242,37 @@ bool ScriptHasValidPAKProof(const CScript& script, const uint256& genesis_hash)
     }
 
     return true;
+}
+
+CPAKList GetActivePAKList(const CBlockIndex* pblockindex, const Consensus::Params& params)
+{
+    assert(pblockindex);
+
+    const uint32_t epoch_length = params.dynamic_epoch_length;
+    uint32_t epoch_age = pblockindex->nHeight % epoch_length;
+    uint32_t epoch_start_height = pblockindex->nHeight - epoch_age;
+
+    const CBlockIndex* p_epoch_start = pblockindex->GetAncestor(epoch_start_height-epoch_length);
+
+    CPAKList paklist;
+    bool is_reject;
+    if (p_epoch_one_start) {
+        if (!p_epoch_start->d_params.IsNull()) {
+        } else {
+            std::vector<std::vector<unsigned char>> offline_keys;
+            std::vector<std::vector<unsigned char>> online_keys;
+            // Get list from chainparams
+            for (const auto& entry : params.first_extension_space) {
+                // This implies reject list is proper default for invalid commitment
+                if (entry.size() != 66) {
+                    // We should just return whatever we get? Also filter for 256 entries total
+                    return CPAKList();
+                }
+                offline_keys.emplace_back(entry.begin(), entry.begin()+33);
+                online_keys.emplace_back(entry.end()-33, entry.end());
+            }
+            CPAKList::FromBytes(paklist, offline_keys, online_keys, is_reject);
+        }
+    }
+    return paklist;
 }
