@@ -265,11 +265,14 @@ CPAKList GetActivePAKList(const CBlockIndex* pblockindex, const Consensus::Param
             for (const auto& entry : params.first_extension_space) {
                 // This implies reject list is proper default for invalid commitment
                 if (entry.size() != 66) {
-                    // We should just return whatever we get? Also filter for 256 entries total
                     return CPAKList();
                 }
                 offline_keys.emplace_back(entry.begin(), entry.begin()+33);
                 online_keys.emplace_back(entry.end()-33, entry.end());
+            }
+            // TODO Allow additional data for other policy/consensus reasons
+            if (offline_keys.size() > SECP256K1_WHITELIST_MAX_N_KEYS) {
+                return CPAKList();
             }
             CPAKList::FromBytes(paklist, offline_keys, online_keys, is_reject);
         }
