@@ -255,26 +255,29 @@ CPAKList GetActivePAKList(const CBlockIndex* pblockindex, const Consensus::Param
     const CBlockIndex* p_epoch_start = pblockindex->GetAncestor(epoch_start_height-epoch_length);
 
     CPAKList paklist;
-    bool is_reject;
-    if (p_epoch_one_start) {
-        if (!p_epoch_start->d_params.IsNull()) {
-        } else {
-            std::vector<std::vector<unsigned char>> offline_keys;
-            std::vector<std::vector<unsigned char>> online_keys;
-            // Get list from chainparams
-            for (const auto& entry : params.first_extension_space) {
-                // This implies reject list is proper default for invalid commitment
-                if (entry.size() != 66) {
-                    return CPAKList();
-                }
-                offline_keys.emplace_back(entry.begin(), entry.begin()+33);
-                online_keys.emplace_back(entry.end()-33, entry.end());
+    bool is_reject = true;
+    if (p_epoch_start) {
+        // Get list from chainparams or block header, depending on activation
+        const auto& extension_space = p_epoch_start->d_params.IsNull() ? params.first_extension_space : p_epoch_start->d_params.m_current.m_extension_space;
+        std::vector<std::vector<unsigned char>> offline_keys;
+        std::vector<std::vector<unsigned char>> online_keys;
+        for (const auto& entry : extension_space) {
+            // As soon as we find something that is possibly not 2 serialized pubkeys
+            // we stop looking. CPAKList::FromBytes does pubkey validation itself.
+            if (entry.size() != 66) {
+                break;
             }
-            // TODO Allow additional data for other policy/consensus reasons
-            if (offline_keys.size() > SECP256K1_WHITELIST_MAX_N_KEYS) {
-                return CPAKList();
+            // Set to non-reject is any keys exist
+            is_reject = false;
+            offline_keys.emplace_back(entry.begin(), entry.begin()+33);
+            online_keys.emplace_back(entry.end()-33, entry.end());
+            // Allow additional data, just ignore
+            if (offline_keys.size() == SECP256K1_WHITELIST_MAX_N_KEYS) {
+                break;
             }
-            CPAKList::FromBytes(paklist, offline_keys, online_keys, is_reject);
+        }
+        if (!CPAKList::FromBytes(paklist, offline_keys, online_keys, is_reject)) {
+            return CPAKList();
         }
     }
     return paklist;
