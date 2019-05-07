@@ -106,7 +106,7 @@ void ResetProof(CBlockHeader& block)
     block.proof.solution.clear();
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, int min_tx_age)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, int min_tx_age, const ConsensusParamEntry& proposed_entry)
 {
     assert(min_tx_age >= 0);
     int64_t nTimeStart = GetTimeMicros();
@@ -119,22 +119,11 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         return nullptr;
     pblock = &pblocktemplate->block; // pointer for convenience
 
-    std::vector<CScript> commitments;
-
     // ELEMENTS: PAK
     // Create block pak commitment if set in conf file and validating pegouts
-    if (Params().GetEnforcePak() && g_paklist_config) {
-        if (*g_paklist_config != g_paklist_blockchain) {
-            g_paklist_config->CreateCommitments(commitments);
-        }
-    }
-
-    // Pad block weight to account for OP_RETURN commitments with two compressed pubkeys
-    for (const auto& commitment : commitments) {
-        CTxOut output(CAsset(), 0, commitment);
+    if (Params().GetEnforcePak()) {
         nBlockWeight += ::GetSerializeSize(output, PROTOCOL_VERSION)*WITNESS_SCALE_FACTOR;
     }
-    // END PAK
 
     // Add dummy coinbase tx as first transaction
     pblock->vtx.emplace_back();
@@ -206,12 +195,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         }
     }
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
-    // ELEMENTS: PAK
-    // Add PAK transition commitments
-    for (unsigned int i = 0; i < commitments.size(); i++) {
-        coinbaseTx.vout.push_back(CTxOut(CAsset(), 0, commitments[i]));
-    }
-    // END PAK
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
     pblocktemplate->vTxFees[0] = -nFees;

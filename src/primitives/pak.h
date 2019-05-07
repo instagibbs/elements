@@ -8,6 +8,7 @@
 #include <script/script.h>
 #include <secp256k1/include/secp256k1_whitelist.h>
 #include <boost/optional.hpp>
+#include <chain.h>
 
 class CPAKList
 {
@@ -59,10 +60,6 @@ public:
     {
         return m_offline_keys.size();
     }
-
-    static CScript Magic();
-    /** Produce a list of scripts to add to the coinbase to signal changes in PAK list or rejection of any pak proofs to nodes */
-    void CreateCommitments(std::vector<CScript> &commitments) const;
 
     static bool FromBytes(CPAKList &paklist, const std::vector<std::vector<unsigned char> >& offline_keys, const std::vector<std::vector<unsigned char> >& online_keys, bool is_reject);
     void ToBytes(std::vector<std::vector<unsigned char> >& offline_keys, std::vector<std::vector<unsigned char> >& online_keys, bool &is_reject) const;

@@ -33,68 +33,6 @@ public:
 static CSecp256k1Init instance_of_csecp256k1;
 }
 
-CScript CPAKList::Magic()
-{
-    CScript scriptPubKey;
-    scriptPubKey.resize(6);
-    scriptPubKey[0] = OP_RETURN;
-    scriptPubKey[1] = 0x04;
-    scriptPubKey[2] = 0xab;
-    scriptPubKey[3] = 0x22;
-    scriptPubKey[4] = 0xaa;
-    scriptPubKey[5] = 0xee;
-    return scriptPubKey;
-}
-
-std::vector<CScript> CPAKList::GenerateCoinbasePAKCommitments() const
-{
-    std::vector<CScript> commitments;
-    CScript scriptPubKey = CPAKList::Magic();
-
-    for (unsigned int i = 0; i < m_offline_keys.size(); i++) {
-        CScript scriptCommitment(scriptPubKey);
-        unsigned char pubkey[33];
-        size_t outputlen = 33;
-        secp256k1_ec_pubkey_serialize(secp256k1_ctx_pak, pubkey, &outputlen, &m_offline_keys[i], SECP256K1_EC_COMPRESSED);
-        assert(outputlen == 33);
-        scriptCommitment << std::vector<unsigned char>(pubkey, pubkey+outputlen);
-        secp256k1_ec_pubkey_serialize(secp256k1_ctx_pak, pubkey, &outputlen, &m_online_keys[i], SECP256K1_EC_COMPRESSED);
-        assert(outputlen == 33);
-        scriptCommitment << std::vector<unsigned char>(pubkey, pubkey+outputlen);
-        commitments.push_back(scriptCommitment);
-    }
-
-    return commitments;
-}
-
-std::vector<CScript> CPAKList::GenerateCoinbasePAKReject() const
-{
-    CScript scriptPubKey = CPAKList::Magic();
-
-    std::vector<unsigned char> reject;
-    reject.push_back('R');
-    reject.push_back('E');
-    reject.push_back('J');
-    reject.push_back('E');
-    reject.push_back('C');
-    reject.push_back('T');
-
-    scriptPubKey << reject;
-
-    std::vector<CScript> commitment;
-    commitment.push_back(scriptPubKey);
-    return commitment;
-}
-
-void CPAKList::CreateCommitments(std::vector<CScript> &commitments) const
-{
-    if(reject) {
-        commitments = GenerateCoinbasePAKReject();
-    } else {
-        commitments = GenerateCoinbasePAKCommitments();
-    }
-}
-
 bool CPAKList::operator==(const CPAKList &other) const
 {
     if (this->reject != other.reject) {
