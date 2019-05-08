@@ -609,6 +609,7 @@ void CTxMemPool::removeForBlock(const std::vector<CTransactionRef>& vtx, unsigne
         std::vector<CTransactionRef> tx_to_remove;
         for (const auto& entry : mapTx) {
             for (const auto& out : entry.GetTx().vout) {
+                // TODO get pak list here to boot old pegouts
                 if (out.scriptPubKey.IsPegoutScript(Params().ParentGenesisBlockHash()) &&
                             !ScriptHasValidPAKProof(out.scriptPubKey, Params().ParentGenesisBlockHash())) {
                     const uint256 tx_id = entry.GetTx().GetHash();

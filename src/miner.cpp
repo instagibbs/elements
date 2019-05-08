@@ -106,7 +106,7 @@ void ResetProof(CBlockHeader& block)
     block.proof.solution.clear();
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, int min_tx_age, const ConsensusParamEntry& proposed_entry)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, int min_tx_age, ConsensusParamEntry* proposed_entry)
 {
     assert(min_tx_age >= 0);
     int64_t nTimeStart = GetTimeMicros();
@@ -119,11 +119,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         return nullptr;
     pblock = &pblocktemplate->block; // pointer for convenience
 
-    // ELEMENTS: PAK
-    // Create block pak commitment if set in conf file and validating pegouts
-    if (Params().GetEnforcePak()) {
-        nBlockWeight += ::GetSerializeSize(output, PROTOCOL_VERSION)*WITNESS_SCALE_FACTOR;
-    }
 
     // Add dummy coinbase tx as first transaction
     pblock->vtx.emplace_back();
@@ -160,6 +155,15 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     fIncludeWitness = IsWitnessEnabled(pindexPrev, chainparams.GetConsensus()) && fMineWitnessTx;
 
     if (g_signed_blocks) {
+        // TODO Construct "m_current" using chainstate info, or always pass it in
+        // TODO fill in m_proposed, using passed in
+        // TODO pad the blockweight accordingly
+        // ELEMENTS: PAK
+        if (proposed_entry) {
+            nBlockWeight += ::GetSerializeSize(output, PROTOCOL_VERSION)*WITNESS_SCALE_FACTOR;
+        }
+
+        // TODO don't pad these when not dynafed
         // Pad block weight by block proof fields (including upper-bound of signature)
         nBlockWeight += chainparams.GetConsensus().signblockscript.size() * WITNESS_SCALE_FACTOR;
         nBlockWeight += chainparams.GetConsensus().max_block_signature_size * WITNESS_SCALE_FACTOR;

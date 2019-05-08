@@ -94,6 +94,7 @@ void CPAKList::ToBytes(std::vector<std::vector<unsigned char> >& offline_keys, s
 
 // Proof follows the OP_RETURN <genesis_block_hash> <destination_scriptpubkey>
 // in multiple pushes: <full_pubkey> <proof>
+// TODO pass in acceptable pak list instead
 bool ScriptHasValidPAKProof(const CScript& script, const uint256& genesis_hash)
 {
     assert(script.IsPegoutScript(genesis_hash));
