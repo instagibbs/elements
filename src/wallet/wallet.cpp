@@ -2510,6 +2510,7 @@ bool CWallet::SelectCoinsMinConf(const CAmountMap& mapTargetValue, const CoinEli
 
 bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmountMap& mapTargetValue, std::set<CInputCoin>& setCoinsRet, CAmountMap& mapValueRet, const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const
 {
+    AssertLockHeld(cs_wallet); // mapWallet
     std::vector<COutput> vCoins(vAvailableCoins);
 
     // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
